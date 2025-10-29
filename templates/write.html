@@ -124,7 +124,10 @@ emotionInputs.forEach(input => {
     });
 });
 
-// 폼 제출 전 확인
+# Configuration constants
+MIN_CONTENT_LENGTH = 10
+
+# Form validation
 document.querySelector('form').addEventListener('submit', function(e) {
     const title = document.getElementById('title').value.trim();
     const content = document.getElementById('content').value.trim();
@@ -136,9 +139,9 @@ document.querySelector('form').addEventListener('submit', function(e) {
         return;
     }
     
-    if (content.length < 10) {
+    if (content.length < MIN_CONTENT_LENGTH) {
         e.preventDefault();
-        alert('내용을 10자 이상 입력해주세요.');
+        alert(`내용을 ${MIN_CONTENT_LENGTH}자 이상 입력해주세요.`);
         return;
     }
 });
