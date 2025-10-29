@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if entry %}일기 수정{% else %}일기 쓰기{% endif %} - 감성 일기장
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    {% if entry %}
+                        <i class="bi bi-pencil-square"></i> 일기 수정
+                    {% else %}
+                        <i class="bi bi-plus-circle"></i> 새 일기 쓰기
+                    {% endif %}
+                </h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('save') }}">
+                    {% if entry %}
+                        <input type="hidden" name="entry_id" value="{{ entry.id }}">
+                    {% endif %}
+                    
+                    <!-- 제목 -->
+                    <div class="mb-3">
+                        <label for="title" class="form-label">제목 *</label>
+                        <input type="text" 
+                               class="form-control" 
+                               id="title" 
+                               name="title" 
+                               value="{{ entry.title if entry else '' }}" 
+                               required 
+                               placeholder="오늘의 일기 제목을 입력하세요">
+                    </div>
+                    
+                    <!-- 감정 선택 -->
+                    <div class="mb-3">
+                        <label class="form-label">오늘의 감정 *</label>
+                        <div class="row">
+                            {% set emotions = [
+                                ('기쁨', '😊', 'success'),
+                                ('슬픔', '😢', 'primary'),
+                                ('화남', '😠', 'danger'),
+                                ('평온', '😌', 'info')
+                            ] %}
+                            
+                            {% for emotion, icon, color in emotions %}
+                            <div class="col-6 col-md-3 mb-2">
+                                <input type="radio" 
+                                       class="btn-check" 
+                                       name="emotion" 
+                                       id="emotion-{{ emotion }}" 
+                                       value="{{ emotion }}"
+                                       {% if entry and entry.emotion == emotion %}checked{% endif %}
+                                       required>
+                                <label class="btn btn-outline-{{ color }} w-100" for="emotion-{{ emotion }}">
+                                    <div class="fs-4">{{ icon }}</div>
+                                    <div>{{ emotion }}</div>
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <!-- 내용 -->
+                    <div class="mb-4">
+                        <label for="content" class="form-label">내용 *</label>
+                        <textarea class="form-control" 
+                                  id="content" 
+                                  name="content" 
+                                  rows="10" 
+                                  required 
+                                  placeholder="오늘 있었던 일이나 느낀 점을 자유롭게 적어보세요...">{{ entry.content if entry else '' }}</textarea>
+                        <div class="form-text">
+                            <span id="charCount">0</span>자 작성됨
+                        </div>
+                    </div>
+                    
+                    <!-- 버튼 -->
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('index') }}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> 목록으로
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            {% if entry %}
+                                <i class="bi bi-check-circle"></i> 수정하기
+                            {% else %}
+                                <i class="bi bi-save"></i> 저장하기
+                            {% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// 글자 수 카운터
+const contentTextarea = document.getElementById('content');
+const charCount = document.getElementById('charCount');
+
+function updateCharCount() {
+    charCount.textContent = contentTextarea.value.length;
+}
+
+contentTextarea.addEventListener('input', updateCharCount);
+// 페이지 로드 시 초기 글자 수 설정
+updateCharCount();
+
+// 감정 선택 시 애니메이션 효과
+const emotionInputs = document.querySelectorAll('input[name="emotion"]');
+emotionInputs.forEach(input => {
+    input.addEventListener('change', function() {
+        const label = this.nextElementSibling;
+        label.style.transform = 'scale(1.1)';
+        setTimeout(() => {
+            label.style.transform = 'scale(1)';
+        }, 200);
+    });
+});
+
+# Configuration constants
+MIN_CONTENT_LENGTH = 10
+
+# Form validation
+document.querySelector('form').addEventListener('submit', function(e) {
+    const title = document.getElementById('title').value.trim();
+    const content = document.getElementById('content').value.trim();
+    const emotion = document.querySelector('input[name="emotion"]:checked');
+    
+    if (!title || !content || !emotion) {
+        e.preventDefault();
+        alert('모든 필수 항목을 입력해주세요.');
+        return;
+    }
+    
+    if (content.length < MIN_CONTENT_LENGTH) {
+        e.preventDefault();
+        alert(`내용을 ${MIN_CONTENT_LENGTH}자 이상 입력해주세요.`);
+        return;
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block title %}{{ entry.title }} - 감성 일기장{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <!-- 상단 네비게이션 -->
+        <div class="mb-3">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('index') }}" class="text-white text-decoration-none">
+                            <i class="bi bi-house"></i> 홈
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item active text-white-50">일기 상세</li>
+                </ol>
+            </nav>
+        </div>
+        
+        <!-- 일기 상세 내용 -->
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h2 class="mb-2">{{ entry.title }}</h2>
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="emotion-badge badge bg-{{ entry.emotion_color }} fs-6">
+                                {{ entry.emotion_icon }} {{ entry.emotion }}
+                            </span>
+                            <small class="journal-date">
+                                <i class="bi bi-calendar3"></i> {{ entry.created_at.strftime('%Y년 %m월 %d일 %H:%M') }}
+                            </small>
+                            {% if entry.updated_at != entry.created_at %}
+                            <small class="journal-date">
+                                <i class="bi bi-pencil"></i> {{ entry.updated_at.strftime('%Y년 %m월 %d일 %H:%M') }} 수정됨
+                            </small>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="journal-content">
+                    {{ entry.content | replace('\n', '<br>') | safe }}
+                </div>
+            </div>
+            <div class="card-footer bg-transparent">
+                <div class="d-flex justify-content-between align-items-center">
+                    <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> 목록으로
+                    </a>
+                    <div>
+                        <a href="{{ url_for('edit', entry_id=entry.id) }}" class="btn btn-primary me-2">
+                            <i class="bi bi-pencil"></i> 수정하기
+                        </a>
+                        <button class="btn btn-outline-danger" onclick="deleteEntry({{ entry.id }})">
+                            <i class="bi bi-trash"></i> 삭제하기
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 통계 정보 -->
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <i class="bi bi-file-text display-4 text-muted"></i>
+                        <h5 class="mt-2">글자 수</h5>
+                        <p class="text-muted mb-0">{{ entry.content | length }}자</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <i class="bi bi-clock display-4 text-muted"></i>
+                        <h5 class="mt-2">작성한 지</h5>
+                        <p class="text-muted mb-0" id="timeAgo"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">일기 삭제</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <strong>"{{ entry.title }}"</strong> 일기를 정말로 삭제하시겠습니까?<br>
+                삭제된 일기는 복구할 수 없습니다.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                <a href="{{ url_for('delete', entry_id=entry.id) }}" class="btn btn-danger">삭제</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function deleteEntry(entryId) {
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    deleteModal.show();
+}
+
+// 작성한 지 계산
+function updateTimeAgo() {
+    const createdAt = new Date('{{ entry.created_at.isoformat() }}');
+    const now = new Date();
+    const diffMs = now - createdAt;
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+    
+    let timeAgoText;
+    if (diffDays > 0) {
+        timeAgoText = diffDays + '일 전';
+    } else if (diffHours > 0) {
+        timeAgoText = diffHours + '시간 전';
+    } else if (diffMinutes > 0) {
+        timeAgoText = diffMinutes + '분 전';
+    } else {
+        timeAgoText = '방금 전';
+    }
+    
+    document.getElementById('timeAgo').textContent = timeAgoText;
+}
+
+updateTimeAgo();
+</script>
+{% endblock %}

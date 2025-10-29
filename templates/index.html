@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="hero-section">
+    <h1>✨ 감성 일기장 ✨</h1>
+    <p>오늘의 감정을 기록해보세요</p>
+</div>
+
+{% if entries %}
+    <div class="row">
+        {% for entry in entries %}
+        <div class="col-lg-6 col-xl-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span class="emotion-badge badge bg-{{ entry.emotion_color }}">
+                        {{ entry.emotion_icon }} {{ entry.emotion }}
+                    </span>
+                    <small class="journal-date">
+                        {{ entry.created_at.strftime('%Y년 %m월 %d일') }}
+                    </small>
+                </div>
+                <div class="card-body">
+                    <h5 class="card-title">{{ entry.title }}</h5>
+                    <p class="card-text journal-content">
+                        {% if entry.content|length > 100 %}
+                            {{ entry.content[:100] }}...
+                        {% else %}
+                            {{ entry.content }}
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('detail', entry_id=entry.id) }}" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-eye"></i> 자세히 보기
+                        </a>
+                        <div>
+                            <a href="{{ url_for('edit', entry_id=entry.id) }}" class="btn btn-outline-secondary btn-sm me-1">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <button class="btn btn-outline-danger btn-sm" onclick="deleteEntry({{ entry.id }})">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="text-center text-white">
+        <div class="card mx-auto" style="max-width: 500px;">
+            <div class="card-body">
+                <i class="bi bi-journal-plus display-1 text-muted"></i>
+                <h3 class="card-title mt-3 text-muted">아직 일기가 없어요</h3>
+                <p class="card-text text-muted">첫 번째 일기를 작성해보세요!</p>
+                <a href="{{ url_for('write') }}" class="btn btn-primary btn-lg">
+                    <i class="bi bi-plus-circle"></i> 일기 쓰기
+                </a>
+            </div>
+        </div>
+    </div>
+{% endif %}
+
+<!-- Floating Action Button -->
+<a href="{{ url_for('write') }}" class="btn btn-primary btn-floating d-flex align-items-center justify-content-center">
+    <i class="bi bi-plus fs-4"></i>
+</a>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">일기 삭제</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                정말로 이 일기를 삭제하시겠습니까? 삭제된 일기는 복구할 수 없습니다.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                <a href="#" id="confirmDeleteBtn" class="btn btn-danger">삭제</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function deleteEntry(entryId) {
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    const confirmBtn = document.getElementById('confirmDeleteBtn');
+    confirmBtn.href = '/delete/' + entryId;
+    deleteModal.show();
+}
+</script>
+{% endblock %}
