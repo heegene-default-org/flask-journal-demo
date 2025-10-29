@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="{{ get_locale() }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ _('Journal Demo') }}{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <h1><a href="{{ url_for('index') }}">{{ _('My Journal') }}</a></h1>
+            <div class="language-switcher">
+                <a href="{{ url_for('set_language', language='ko') }}" 
+                   class="{{ 'active' if get_locale() == 'ko' else '' }}">한국어</a>
+                <a href="{{ url_for('set_language', language='en') }}" 
+                   class="{{ 'active' if get_locale() == 'en' else '' }}">English</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="flash-message flash-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>
