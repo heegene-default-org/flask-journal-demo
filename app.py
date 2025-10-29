@@ -1,11 +1,12 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from flask_babel import Babel, _, get_locale, ngettext
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 import json
+import uuid
 
 app = Flask(__name__)
-app.secret_key = 'your-secret-key-here'
+app.secret_key = os.environ.get('SECRET_KEY', 'your-dev-secret-key-change-in-production')
 
 # Configuration for Babel
 app.config['LANGUAGES'] = {
@@ -45,10 +46,10 @@ def new_entry():
         
         if title and content:
             entry = {
-                'id': len(journal_entries) + 1,
+                'id': str(uuid.uuid4()),  # Use UUID for unique IDs
                 'title': title,
                 'content': content,
-                'date': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                'date': datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
             }
             journal_entries.append(entry)
             flash(_('Journal entry created successfully!'), 'success')
@@ -58,7 +59,7 @@ def new_entry():
     
     return render_template('new_entry.html')
 
-@app.route('/edit/<int:entry_id>', methods=['GET', 'POST'])
+@app.route('/edit/<entry_id>', methods=['GET', 'POST'])
 def edit_entry(entry_id):
     entry = next((e for e in journal_entries if e['id'] == entry_id), None)
     
@@ -80,7 +81,7 @@ def edit_entry(entry_id):
     
     return render_template('edit_entry.html', entry=entry)
 
-@app.route('/delete/<int:entry_id>')
+@app.route('/delete/<entry_id>')
 def delete_entry(entry_id):
     global journal_entries
     journal_entries = [e for e in journal_entries if e['id'] != entry_id]
@@ -89,8 +90,30 @@ def delete_entry(entry_id):
 
 @app.route('/set_language/<language>')
 def set_language(language=None):
-    session['language'] = language
-    return redirect(request.referrer or url_for('index'))
+    # Validate language to prevent malicious input
+    if language in app.config['LANGUAGES']:
+        session['language'] = language
+    
+    # Only redirect to safe, known routes to prevent open redirect
+    safe_referrer = None
+    if request.referrer:
+        try:
+            from urllib.parse import urlparse
+            parsed_referrer = urlparse(request.referrer)
+            parsed_host = urlparse(request.host_url)
+            
+            # Check if referrer is from same host and has safe path
+            if (parsed_referrer.netloc == parsed_host.netloc and 
+                parsed_referrer.path in ['/', '/new', '/edit'] or 
+                parsed_referrer.path.startswith('/edit/')):
+                safe_referrer = request.referrer
+        except:
+            # If any parsing fails, use default redirect
+            pass
+    
+    return redirect(safe_referrer or url_for('index'))
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Use debug mode only in development environment
+    debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
+    app.run(debug=debug_mode)
