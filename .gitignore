@@ -205,3 +205,11 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Azure 관련
+.postgres-password.txt
+*.zip
+
+# 로컬 개발
+dev.db
+*.sqlite

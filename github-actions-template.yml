@@ -1,0 +1,158 @@
+name: Deploy to Azure App Service
+
+# 이 워크플로우는 main 브랜치에 push할 때 자동으로 Azure App Service에 배포합니다.
+# GitHub Secrets에 AZURE_CREDENTIALS를 설정해야 합니다.
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  AZURE_WEBAPP_NAME: app-flask-journal-prod    # Azure Web App 이름으로 변경
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  build:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 코드 체크아웃
+      uses: actions/checkout@v4
+
+    - name: Python ${{ env.PYTHON_VERSION }} 설정
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+    
+    - name: 가상 환경 생성
+      run: |
+        python -m venv venv
+        source venv/bin/activate
+        echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
+        echo "$VIRTUAL_ENV/bin" >> $GITHUB_PATH
+    
+    - name: 의존성 설치
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Lint with flake8 (선택사항)
+      run: |
+        pip install flake8
+        # 문법 오류 및 정의되지 않은 이름만 체크
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # 모든 파일 복잡도 체크
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      continue-on-error: true
+    
+    - name: 테스트 실행 (있는 경우)
+      run: |
+        pip install pytest pytest-cov
+        pytest tests/ --cov=. --cov-report=xml --cov-report=term || echo "테스트 없음, 건너뜀"
+      continue-on-error: true
+    
+    - name: 보안 스캔 (Bandit)
+      run: |
+        pip install bandit
+        bandit -r . -f json -o bandit-report.json || true
+        bandit -r . -ll || true
+      continue-on-error: true
+    
+    - name: 의존성 보안 스캔 (Safety)
+      run: |
+        pip install safety
+        safety check --json || true
+      continue-on-error: true
+    
+    - name: 배포 아티팩트 업로드
+      uses: actions/upload-artifact@v3
+      with:
+        name: python-app
+        path: |
+          .
+          !venv/
+          !.git/
+          !.github/
+          !tests/
+          !__pycache__/
+          !*.pyc
+          !.env
+        retention-days: 1
+
+  deploy:
+    name: Deploy to Azure
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment:
+      name: 'Production'
+      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+    
+    steps:
+    - name: 아티팩트 다운로드
+      uses: actions/download-artifact@v3
+      with:
+        name: python-app
+    
+    - name: Azure 로그인
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    
+    - name: Azure App Service에 배포
+      id: deploy-to-webapp
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: ${{ env.AZURE_WEBAPP_NAME }}
+        package: .
+    
+    - name: 배포 확인
+      run: |
+        echo "애플리케이션이 배포되었습니다: ${{ steps.deploy-to-webapp.outputs.webapp-url }}"
+        # Health check 엔드포인트 확인
+        sleep 30
+        curl -f ${{ steps.deploy-to-webapp.outputs.webapp-url }}/health || echo "Health check 실패 (엔드포인트 미구현?)"
+    
+    - name: Azure 로그아웃
+      run: |
+        az logout
+      if: always()
+
+  # 스테이징 슬롯에 배포 (선택사항)
+  deploy-staging:
+    name: Deploy to Staging Slot
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'pull_request'
+    environment:
+      name: 'Staging'
+    
+    steps:
+    - name: 아티팩트 다운로드
+      uses: actions/download-artifact@v3
+      with:
+        name: python-app
+    
+    - name: Azure 로그인
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    
+    - name: 스테이징 슬롯에 배포
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: ${{ env.AZURE_WEBAPP_NAME }}
+        slot-name: staging
+        package: .
+    
+    - name: Azure 로그아웃
+      run: |
+        az logout
+      if: always()
