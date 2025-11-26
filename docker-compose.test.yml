@@ -1,0 +1,54 @@
+# 테스트 환경용 Docker Compose 파일
+
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - FLASK_ENV=testing
+      - DATABASE_URL=postgresql://test_user:test_pass@db:5432/test_db
+      - REDIS_URL=redis://cache:6379/1
+      - SECRET_KEY=test-secret-key
+    depends_on:
+      db:
+        condition: service_healthy
+      cache:
+        condition: service_healthy
+    networks:
+      - journal-network
+    command: >
+      sh -c "
+        flask db upgrade &&
+        pytest tests/ -v --cov=app --cov-report=xml --cov-report=html
+      "
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=test_db
+      - POSTGRES_USER=test_user
+      - POSTGRES_PASSWORD=test_pass
+    networks:
+      - journal-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test_user -d test_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  cache:
+    image: redis:7-alpine
+    networks:
+      - journal-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+networks:
+  journal-network:
+    driver: bridge

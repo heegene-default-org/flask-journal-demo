@@ -1,0 +1,58 @@
+# 개발 환경용 Docker Compose 오버라이드 파일
+# 사용법: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder  # 개발 모드에서는 builder 스테이지 사용 가능
+    environment:
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+    volumes:
+      # 코드 변경 시 즉시 반영
+      - ./app:/app/app
+      - ./tests:/app/tests
+    command: flask run --host=0.0.0.0 --port=5000 --reload
+    ports:
+      - "5000:5000"
+      - "5678:5678"  # 디버거 포트 (ptvsd/debugpy 사용 시)
+
+  db:
+    ports:
+      - "5432:5432"  # 로컬에서 직접 접근 가능
+    environment:
+      - POSTGRES_DB=journal_db_dev
+      - POSTGRES_USER=dev_user
+      - POSTGRES_PASSWORD=dev_pass
+
+  cache:
+    ports:
+      - "6379:6379"  # 로컬에서 직접 접근 가능
+
+  # 개발 환경용 Adminer (데이터베이스 GUI)
+  adminer:
+    image: adminer:latest
+    container_name: flask-journal-adminer
+    ports:
+      - "8080:8080"
+    networks:
+      - journal-network
+    depends_on:
+      - db
+
+  # 개발 환경용 Redis Commander (Redis GUI)
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: flask-journal-redis-commander
+    environment:
+      - REDIS_HOSTS=local:cache:6379
+    ports:
+      - "8081:8081"
+    networks:
+      - journal-network
+    depends_on:
+      - cache
