@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template, redirect, url_for, session, flash
+from flask import Flask, render_template, redirect, url_for, session, flash, request
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from flask_sqlalchemy import SQLAlchemy
 from authlib.integrations.flask_client import OAuth
@@ -42,7 +42,7 @@ class User(db.Model):
     name = db.Column(db.String(150), nullable=False)
     google_id = db.Column(db.String(150), unique=True, nullable=False)
     profile_pic = db.Column(db.String(500))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.utcnow())
     journals = db.relationship('Journal', backref='author', lazy=True)
 
     def is_active(self):
@@ -62,7 +62,7 @@ class Journal(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False)
     content = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.utcnow())
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
 @login_manager.user_loader
@@ -108,7 +108,9 @@ def authorize():
             flash('구글 로그인에 성공했습니다!', 'success')
             return redirect(url_for('index'))
     except Exception as e:
-        flash(f'로그인 중 오류가 발생했습니다: {str(e)}', 'error')
+        # 보안을 위해 상세 오류는 로그에만 기록
+        app.logger.error(f'로그인 오류: {str(e)}')
+        flash('로그인 중 오류가 발생했습니다. 다시 시도해주세요.', 'error')
         return redirect(url_for('index'))
 
 @app.route('/logout')
@@ -121,7 +123,6 @@ def logout():
 @app.route('/journal/new', methods=['GET', 'POST'])
 @login_required
 def new_journal():
-    from flask import request
     if request.method == 'POST':
         title = request.form.get('title')
         content = request.form.get('content')
