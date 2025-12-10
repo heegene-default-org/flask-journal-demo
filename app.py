@@ -2,9 +2,10 @@ import os
 from flask import Flask, render_template, redirect, url_for, session, flash, request
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from flask_sqlalchemy import SQLAlchemy
+from flask_wtf.csrf import CSRFProtect
 from authlib.integrations.flask_client import OAuth
 from dotenv import load_dotenv
-from datetime import datetime
+from datetime import datetime, timezone
 
 # 환경 변수 로드
 load_dotenv()
@@ -17,6 +18,9 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # 데이터베이스 초기화
 db = SQLAlchemy(app)
+
+# CSRF 보호 초기화
+csrf = CSRFProtect(app)
 
 # 로그인 매니저 초기화
 login_manager = LoginManager()
@@ -42,7 +46,7 @@ class User(db.Model):
     name = db.Column(db.String(150), nullable=False)
     google_id = db.Column(db.String(150), unique=True, nullable=False)
     profile_pic = db.Column(db.String(500))
-    created_at = db.Column(db.DateTime, default=lambda: datetime.utcnow())
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     journals = db.relationship('Journal', backref='author', lazy=True)
 
     def is_active(self):
@@ -62,7 +66,7 @@ class Journal(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False)
     content = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.utcnow())
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
 @login_manager.user_loader
@@ -108,8 +112,9 @@ def authorize():
             flash('구글 로그인에 성공했습니다!', 'success')
             return redirect(url_for('index'))
     except Exception as e:
-        # 보안을 위해 상세 오류는 로그에만 기록
-        app.logger.error(f'로그인 오류: {str(e)}')
+        # 보안을 위해 상세 오류는 로그에만 기록하고 사용자에게는 일반 메시지만 표시
+        import traceback
+        app.logger.error(f'로그인 오류 발생: {traceback.format_exc()}')
         flash('로그인 중 오류가 발생했습니다. 다시 시도해주세요.', 'error')
         return redirect(url_for('index'))
 

@@ -15,6 +15,7 @@
         <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
             <h3 style="color: #667eea; margin-bottom: 10px;">{{ journal.title }}</h3>
             <form method="POST" action="{{ url_for('delete_journal', journal_id=journal.id) }}" style="margin: 0;" onsubmit="return confirm('정말 삭제하시겠습니까?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <button type="submit" class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;">삭제</button>
             </form>
         </div>

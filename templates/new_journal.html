@@ -6,6 +6,7 @@
 <h2 style="color: #333; margin-bottom: 30px;">새 저널 작성</h2>
 
 <form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
     <div class="form-group">
         <label for="title">제목</label>
         <input type="text" id="title" name="title" required placeholder="저널 제목을 입력하세요">
