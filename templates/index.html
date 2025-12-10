@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}내 저널 - Flask Journal{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center;">
+    <h2 style="color: #333;">내 저널 목록</h2>
+    <a href="{{ url_for('new_journal') }}" class="btn btn-primary">새 저널 작성</a>
+</div>
+
+{% if journals %}
+<div style="display: grid; gap: 20px;">
+    {% for journal in journals %}
+    <div style="border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; background: #f9fafb;">
+        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
+            <h3 style="color: #667eea; margin-bottom: 10px;">{{ journal.title }}</h3>
+            <form method="POST" action="{{ url_for('delete_journal', journal_id=journal.id) }}" style="margin: 0;" onsubmit="return confirm('정말 삭제하시겠습니까?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <button type="submit" class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;">삭제</button>
+            </form>
+        </div>
+        <p style="color: #666; line-height: 1.6; white-space: pre-wrap;">{{ journal.content }}</p>
+        <p style="color: #999; font-size: 12px; margin-top: 15px;">
+            작성일: {{ journal.created_at.strftime('%Y년 %m월 %d일 %H:%M') }}
+        </p>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div style="text-align: center; padding: 60px 0; color: #999;">
+    <p style="font-size: 18px; margin-bottom: 20px;">아직 작성된 저널이 없습니다.</p>
+    <a href="{{ url_for('new_journal') }}" class="btn btn-primary">첫 저널 작성하기</a>
+</div>
+{% endif %}
+{% endblock %}
