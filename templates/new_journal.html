@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}새 저널 작성 - Flask Journal{% endblock %}
+
+{% block content %}
+<h2 style="color: #333; margin-bottom: 30px;">새 저널 작성</h2>
+
+<form method="POST">
+    <div class="form-group">
+        <label for="title">제목</label>
+        <input type="text" id="title" name="title" required placeholder="저널 제목을 입력하세요">
+    </div>
+    
+    <div class="form-group">
+        <label for="content">내용</label>
+        <textarea id="content" name="content" required placeholder="오늘 있었던 일을 기록해보세요..."></textarea>
+    </div>
+    
+    <div style="display: flex; gap: 10px;">
+        <button type="submit" class="btn btn-primary">저장</button>
+        <a href="{{ url_for('index') }}" class="btn" style="background: #e2e8f0; color: #333;">취소</a>
+    </div>
+</form>
+{% endblock %}
